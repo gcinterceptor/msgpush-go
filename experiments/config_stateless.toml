@@ -29,11 +29,11 @@ kernel_version = "4.15.0-29-generic"
 #        execution.cleanup
 #
 # exports: export commands which should be used to export common environment variables.
-exports = 'export outdir="stateless"'
+exports = 'export outdir="stateless"; export expdir=${PWD}'
 # killall: kill all processes started by the experiment.
 killall = 'for ip in $ip1 $ip2 $ip3 $ip4; do ssh -i ${sshkey} ubuntu@${ip} "kill -9 \$(lsof -i tcp:3000 -t) 2>/dev/null; kill -9 \$(lsof -i tcp:8000 -t) 2>/dev/null"; done'
 # setup: setup the environment (VMs/servers), guaranteeing that everything need to start the experiment is there. For example, copy files and sync repositories.
-setup = 'cd $GOPATH/src/github.com/gcinterceptor/msgpush-go && go build &&  for ip in $ip1 $ip2 $ip3 $ip4; do scp -i ${sshkey} msgpush-go ubuntu@${ip}:~/; done; cd $GOPATH/src/github.com/gcinterceptor/gci-proxy && go build && for ip in $ip1 $ip2 $ip3 $ip4; do scp -i ${sshkey} gci-proxy ubuntu@${ip}:~/; done'
+setup = 'cd $GOPATH/src/github.com/gcinterceptor/msgpush-go && go build &&  for ip in $ip1 $ip2 $ip3 $ip4; do scp -i ${sshkey} msgpush-go ubuntu@${ip}:~/; done; cd $GOPATH/src/github.com/gcinterceptor/gci-proxy && go build && for ip in $ip1 $ip2 $ip3 $ip4; do scp -i ${sshkey} gci-proxy ubuntu@${ip}:~/; done; cd ${expdir}'
 # load: trigger the load.
 load = 'ssh -i ${sshkey} ubuntu@${lb} "sudo rm /var/log/nginx/access.log; sudo /etc/init.d/nginx restart; echo \"GET http://localhost/\" | ./vegeta attack -duration=60s -rate=80 >/dev/null; sudo rm /var/log/nginx/access.log; sudo /etc/init.d/nginx restart; echo \"GET http://localhost/\" | ./vegeta attack -duration=120s -rate=80 > results.bin; cat results.bin | ./vegeta report > vegeta_${expid}.out; cat results.bin | ./vegeta report -reporter=plot > plot_${expid}.html; rm results.bin; cp /var/log/nginx/access.log al_${expid}.csv"'
 # fetch_results: fetches experiment results.
@@ -78,3 +78,21 @@ cleanup = 'ssh -i ${sshkey} ubuntu@${lb} "rm *${expid}*"; for ip in $ip1 $ip2 $i
       
       [execution.gci.5]
       exports = 'export expid="gci_go_5"'
+
+  [execution.gc_off]
+  start = 'for ip in $ip1 $ip2 $ip3 $ip4; do ssh -i ${sshkey} ubuntu@${ip} "kill -9 \$(lsof -i tcp:3000 -t) 2>/dev/null; kill -9 \$(lsof -i tcp:8000 -t) 2>/dev/null; GODEBUG=gctrace=1 GOGC=off USE_GCI=false MSG_SIZE=10240 WINDOW_SIZE=1 PORT=3000 nohup ./msgpush-go  >msgpush_${expid}_${ip}.out 2>msgpush_${expid}_${ip}.err &"; done'
+    
+      [execution.gc_off.1]
+      exports = 'export expid="gc_off_go_1"'
+    
+      [execution.gc_off.2]
+      exports = 'export expid="gc_off_go_2"'
+      
+      [execution.gc_off.3]
+      exports = 'export expid="gc_off_go_3"'
+  
+      [execution.gc_off.4]
+      exports = 'export expid="gc_off_go_4"'
+      
+      [execution.gc_off.5]
+      exports = 'export expid="gc_off_go_5"'
