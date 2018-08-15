@@ -1,0 +1,132 @@
+---
+title: "Stateless Go stdlib HTTP service: GCI On x Off"
+author: "Daniel Fireman"
+date: "Aug, 2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=F)
+knitr::opts_chunk$set(warning=F)
+knitr::opts_chunk$set(cache=F)
+
+require(dplyr)
+require(ggplot2)
+```
+
+# Setup
+
+* num_vms = 4
+* vcpus = 2
+* ram_gb = 4
+* experiment_replicas = 5
+* experiment_warmup = "60s"
+* experiment_duration = "120s"
+* load = "80qps"
+* rails_version = "5.2.0"
+* go_version = "go1.10 linux/amd64"
+* nginx_version = "nginx/1.14.0 (Ubuntu)"
+* so_version = "Ubuntu 18.04 LTS"
+* kernel_version = "4.15.0-29-generic"
+
+# Tail Latency Comparison
+
+```{r}
+read.al <- function(f) {
+  df <- read.csv(f, sep = ";", col.names = c("ts", "status", "latency", "ups"), colClasses = c("ups"="character"))
+  df$latency <- df$latency*1000
+  return(df)
+}
+
+al.gcoff <- rbind (
+  read.al("stateless/al_gc_off_go_1.csv") ,
+  read.al("stateless/al_gc_off_go_2.csv")
+)
+
+al.gci <- rbind (
+  read.al("stateless/al_gci_go_1.csv"),
+  read.al("stateless/al_gci_go_2.csv")
+)
+
+al.nogci <- rbind (
+  read.al("stateless/al_nogci_go_1.csv"),
+  read.al("stateless/al_nogci_go_2.csv")
+)
+
+al.cmp <- rbind(
+  data.frame("latency"=al.gcoff$latency, Type="BASELINE"),
+  data.frame("latency"=al.nogci$latency, Type="GCI OFF"),
+  data.frame("latency"=al.gcoff$latency, Type="GCI ON")
+)
+```
+
+```{r, fig.align="center"}
+gcoff.p99 <- quantile(al.gcoff$latency, 0.99)
+gci.p99 <- quantile(al.gci$latency, 0.99)
+nogci.p99 <- quantile(al.nogci$latency, 0.99)
+
+nogci.p999 <- quantile(al.nogci$latency, 0.999)
+gci.p999 <- quantile(al.gci$latency, 0.999)
+gcoff.p999 <- quantile(al.gcoff$latency, 0.999)
+
+
+ggplot(al.cmp, aes(latency, color=Type)) +
+  stat_ecdf(size=0.8) +
+  # P999
+  annotate(geom="text", x=gcoff.p999+0.5, y=0.9906, label="99.999th", angle=90, color="red") +
+  geom_vline(xintercept=gcoff.p999, linetype="dotted", size=0.8, alpha=0.5, color="red") +
+  annotate(geom="text", x=nogci.p999-0.5, y=0.9906, label="99.999th", angle=90, color="blue") + 
+  geom_vline(xintercept=nogci.p999, linetype="dotted", size=0.8, alpha=0.5, color="blue") +
+  annotate(geom="text", x=gci.p999+0.5, y=0.9906, label="99.999th", angle=90, color="green") +
+  geom_vline(xintercept=gci.p999, linetype="dotted", size=0.8, alpha=0.5, color="green") +
+  
+  
+  # P99
+  annotate(geom="text", x=gcoff.p99-0.5, y=0.9902, label="99th", angle=90, color="red") + 
+  geom_vline(xintercept=gcoff.p99, linetype="dotted", size=0.8, alpha=0.5, color="red") +
+  annotate(geom="text", x=nogci.p99-0.5, y=0.9902, label="99th", angle=90, col="blue") + 
+  geom_vline(xintercept=nogci.p99, linetype="dotted", size=0.8, alpha=0.5, col="blue") +
+  annotate(geom="text", x=gci.p99-0.5, y=0.9902, label="99th", angle=90, color="green") + 
+  geom_vline(xintercept=gci.p99, linetype="dotted", size=0.8, alpha=0.5, color="green") +
+
+  scale_x_continuous(breaks=seq(0, max(al.cmp$latency), 2)) +
+  coord_cartesian(ylim = c(0.99, 1)) +
+  theme(legend.position="top") +
+  scale_color_manual(breaks = c("BASELINE", "GCI OFF", "GCI ON"), values=c("red", "blue", "green")) +
+  theme_bw() +
+  xlab("Latency(ms)") +
+  ylab("ECDF at Tail") 
+```
+
+<!-- # Unavailability -->
+
+<!-- ```{r} -->
+<!-- read.pauses <- function(f) { -->
+<!--   return(read.csv(f,col.names = c("ts", "gen", "pause"))) -->
+<!-- } -->
+
+<!-- pause.gci <- rbind ( -->
+<!--   read.pauses("stateless/proxy_gci_go_1_10.11.4.231.out"), -->
+<!--   read.pauses("stateless/proxy_gci_go_1_10.11.4.251.out"), -->
+<!--   read.pauses("stateless/proxy_gci_go_1_10.11.5.1.out"), -->
+<!--   read.pauses("stateless/proxy_gci_go_1_10.11.5.24.out") -->
+<!-- ) -->
+
+<!-- pause.cmp <- rbind( -->
+<!--   data.frame(pause=pause.gci$pause, Type="GCI On") -->
+<!-- ) -->
+<!-- ``` -->
+<!-- ```{r, fig.align="center"} -->
+<!-- ggplot(pause.cmp, aes(Type, pause)) + -->
+<!--   geom_boxplot() + -->
+<!--   scale_y_continuous(breaks=seq(0,max(pause.cmp$pause), 10)) + -->
+<!--   ylab("Unavailability (ms)") + -->
+<!--   theme_bw() + -->
+<!--   theme(axis.title.x=element_blank()) -->
+<!-- ``` -->
+
+<!-- # Failures -->
+
+<!-- ```{r, echo=T} -->
+<!-- NROW(filter(al.gci, status == 503)) -->
+<!-- ``` -->
