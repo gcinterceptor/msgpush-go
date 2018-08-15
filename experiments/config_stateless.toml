@@ -14,25 +14,67 @@ so_version = "Ubuntu 18.04 LTS"
 kernel_version = "4.15.0-29-generic"
 
 [execution]
+# Execution procedure:
+# 1) execution.exports
+# 2) execution.killall
+# 3) execution.setup
+# 4) for each runset in execution subsections:
+#      for each run in runset subsections:
+#        runset.export
+#        run.export   
+#        run.start
+#        runset.start
+#        execution.load
+#        execution.fetch_results
+#        execution.cleanup
+#
+# exports: export commands which should be used to export common environment variables.
 exports = 'export outdir="stateless"'
+# killall: kill all processes started by the experiment.
 killall = 'for ip in $ip1 $ip2 $ip3 $ip4; do ssh -i ${sshkey} ubuntu@${ip} "kill -9 \$(lsof -i tcp:3000 -t) 2>/dev/null; kill -9 \$(lsof -i tcp:8000 -t) 2>/dev/null"; done'
+# setup: setup the environment (VMs/servers), guaranteeing that everything need to start the experiment is there. For example, copy files and sync repositories.
 setup = 'cd $GOPATH/src/github.com/gcinterceptor/msgpush-go && go build &&  for ip in $ip1 $ip2 $ip3 $ip4; do scp -i ${sshkey} msgpush-go ubuntu@${ip}:~/; done; cd $GOPATH/src/github.com/gcinterceptor/gci-proxy && go build && for ip in $ip1 $ip2 $ip3 $ip4; do scp -i ${sshkey} gci-proxy ubuntu@${ip}:~/; done'
+# load: trigger the load.
 load = 'ssh -i ${sshkey} ubuntu@${lb} "sudo rm /var/log/nginx/access.log; sudo /etc/init.d/nginx restart; echo \"GET http://localhost/\" | ./vegeta attack -duration=60s -rate=80 >/dev/null; sudo rm /var/log/nginx/access.log; sudo /etc/init.d/nginx restart; echo \"GET http://localhost/\" | ./vegeta attack -duration=120s -rate=80 > results.bin; cat results.bin | ./vegeta report > vegeta_${expid}.out; cat results.bin | ./vegeta report -reporter=plot > plot_${expid}.html; rm results.bin; cp /var/log/nginx/access.log al_${expid}.csv"'
+# fetch_results: fetches experiment results.
 fetch_results = 'scp -i ${sshkey} ubuntu@${lb}:~/*_${expid}* ${outdir}; for ip in $ip1 $ip2 $ip3 $ip4; do scp -i ${sshkey} ubuntu@${ip}:~/*_${expid}_${ip}* ${outdir}; done'
+# cleanup: killall processes, removes files and revert configuration changes done by the experiment run.
 cleanup = 'ssh -i ${sshkey} ubuntu@${lb} "rm *${expid}*"; for ip in $ip1 $ip2 $ip3 $ip4; do ssh -i ${sshkey} ubuntu@${ip} "kill -9 \$(lsof -i tcp:3000 -t) 2>/dev/null; kill -9 \$(lsof -i tcp:8000 -t) 2>/dev/null; rm *${expid}_${ip}*"; done'
  
   [execution.no_gci]
+  # start: start all processes needed by the experiment run
   start = 'for ip in $ip1 $ip2 $ip3 $ip4; do ssh -i ${sshkey} ubuntu@${ip} "kill -9 \$(lsof -i tcp:3000 -t) 2>/dev/null; kill -9 \$(lsof -i tcp:8000 -t) 2>/dev/null; GODEBUG=gctrace=1 USE_GCI=false MSG_SIZE=10240 WINDOW_SIZE=1 PORT=3000 nohup ./msgpush-go  >msgpush_${expid}_${ip}.out 2>msgpush_${expid}_${ip}.err &"; done'
-  exports_1 = 'export expid="nogci_go_1"'
-  exports_2 = 'export expid="nogci_go_2"'
-  exports_3 = 'export expid="nogci_go_3"'
-  exports_4 = 'export expid="nogci_go_4"'
-  exports_5 = 'export expid="nogci_go_5"'
+  
+    [execution.no_gci.1]
+    # exports: export commands which should be used to export common environment variables.
+    exports = 'export expid="nogci_go_1"'
+    
+    [execution.no_gci.2]
+    exports = 'export expid="nogci_go_2"'
+  
+    [execution.no_gci.3]
+    exports = 'export expid="nogci_go_3"'
+    
+    [execution.no_gci.4]
+    exports = 'export expid="nogci_go_4"'
+    
+    [execution.no_gci.5]
+    exports = 'export expid="nogci_go_5"'
 
   [execution.gci]
   start = 'for ip in $ip1 $ip2 $ip3 $ip4; do ssh -i ${sshkey} ubuntu@${ip} "kill -9 \$(lsof -i tcp:3000 -t) 2>/dev/null; kill -9 \$(lsof -i tcp:8000 -t) 2>/dev/null; nohup ./gci-proxy --port 3000 --url http://127.0.0.1:8000 --ygen=67108864 --tgen=67108864 >proxy_${expid}_${ip}.out 2>proxy_${expid}_${ip}.err& GODEBUG=gctrace=1 USE_GCI=true MSG_SIZE=10240 WINDOW_SIZE=1 PORT=8000 nohup ./msgpush-go  >msgpush_${expid}_${ip}.out 2>msgpush_${expid}_${ip}.err &"; done'
-  exports_1 = 'export expid="gci_go_1"'
-  exports_2 = 'export expid="gci_go_2"'
-  exports_3 = 'export expid="gci_go_3"'
-  exports_4 = 'export expid="gci_go_4"'
-  exports_5 = 'export expid="gci_go_5"'
+    
+      [execution.gci.1]
+      exports = 'export expid="gci_go_1"'
+    
+      [execution.gci.2]
+      exports = 'export expid="gci_go_2"'
+      
+      [execution.gci.3]
+      exports = 'export expid="gci_go_3"'
+  
+      [execution.gci.4]
+      exports = 'export expid="gci_go_4"'
+      
+      [execution.gci.5]
+      exports = 'export expid="gci_go_5"'
