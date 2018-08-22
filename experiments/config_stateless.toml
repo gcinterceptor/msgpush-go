@@ -43,7 +43,7 @@ cleanup = 'ssh -i ${sshkey} ubuntu@${lb} "rm *${expid}*"; for ip in $ip1 $ip2 $i
  
   [execution.no_gci]
   # start: start all processes needed by the experiment run
-  start = 'for ip in $ip1 $ip2 $ip3 $ip4; do ssh -i ${sshkey} ubuntu@${ip} "kill -9 \$(lsof -i tcp:3000 -t) 2>/dev/null; kill -9 \$(lsof -i tcp:8000 -t) 2>/dev/null; GODEBUG=gctrace=1 USE_GCI=false MSG_SIZE=20480 WINDOW_SIZE=1 PORT=3000 nohup ./msgpush-go  >msgpush_${expid}_${ip}.out 2>msgpush_${expid}_${ip}.err &"; done'
+  start = 'for ip in $ip1 $ip2 $ip3 $ip4; do ssh -i ${sshkey} ubuntu@${ip} "kill -9 \$(lsof -i tcp:3000 -t) 2>/dev/null; kill -9 \$(lsof -i tcp:8000 -t) 2>/dev/null; GODEBUG=gctrace=1 USE_GCI=false MSG_SIZE=20480 WINDOW_SIZE=0 PORT=3000 nohup ./msgpush-go  >msgpush_${expid}_${ip}.out 2>msgpush_${expid}_${ip}.err &"; done'
   
     [execution.no_gci.1]
     # exports: export commands which should be used to export common environment variables.
@@ -62,14 +62,14 @@ cleanup = 'ssh -i ${sshkey} ubuntu@${lb} "rm *${expid}*"; for ip in $ip1 $ip2 $i
     exports = 'export expid="nogci_go_5"'
 
   [execution.gci]
-  start = 'for ip in $ip1 $ip2 $ip3 $ip4; do ssh -i ${sshkey} ubuntu@${ip} "kill -9 \$(lsof -i tcp:3000 -t) 2>/dev/null; kill -9 \$(lsof -i tcp:8000 -t) 2>/dev/null; nohup ./gci-proxy --port 3000 --url http://127.0.0.1:8000 --ygen=67108864 --tgen=67108864 >proxy_${expid}_${ip}.out 2>proxy_${expid}_${ip}.err& GODEBUG=gctrace=1 USE_GCI=true MSG_SIZE=20480 WINDOW_SIZE=1 PORT=8000 nohup ./msgpush-go  >msgpush_${expid}_${ip}.out 2>msgpush_${expid}_${ip}.err &"; done'
+  start = 'for ip in $ip1 $ip2 $ip3 $ip4; do ssh -i ${sshkey} ubuntu@${ip} "kill -9 \$(lsof -i tcp:3000 -t) 2>/dev/null; kill -9 \$(lsof -i tcp:8000 -t) 2>/dev/null; nohup ./gci-proxy --port 3000 --url http://127.0.0.1:8000 --ygen=67108864 --tgen=67108864 >proxy_${expid}_${ip}.out 2>proxy_${expid}_${ip}.err& GODEBUG=gctrace=1 USE_GCI=true MSG_SIZE=20480 WINDOW_SIZE=0 PORT=8000 nohup ./msgpush-go  >msgpush_${expid}_${ip}.out 2>msgpush_${expid}_${ip}.err &"; done'
     
       [execution.gci.1]
       exports = 'export expid="gci_go_1"'
     
       [execution.gci.2]
       exports = 'export expid="gci_go_2"'
-      
+            
       [execution.gci.3]
       exports = 'export expid="gci_go_3"'
   
@@ -80,7 +80,7 @@ cleanup = 'ssh -i ${sshkey} ubuntu@${lb} "rm *${expid}*"; for ip in $ip1 $ip2 $i
       exports = 'export expid="gci_go_5"'
 
   [execution.gc_off]
-  start = 'for ip in $ip1 $ip2 $ip3 $ip4; do ssh -i ${sshkey} ubuntu@${ip} "kill -9 \$(lsof -i tcp:3000 -t) 2>/dev/null; kill -9 \$(lsof -i tcp:8000 -t) 2>/dev/null; GODEBUG=gctrace=1 GOGC=off USE_GCI=false MSG_SIZE=20480 WINDOW_SIZE=1 PORT=3000 nohup ./msgpush-go  >msgpush_${expid}_${ip}.out 2>msgpush_${expid}_${ip}.err &"; done'
+  start = 'for ip in $ip1 $ip2 $ip3 $ip4; do ssh -i ${sshkey} ubuntu@${ip} "kill -9 \$(lsof -i tcp:3000 -t) 2>/dev/null; kill -9 \$(lsof -i tcp:8000 -t) 2>/dev/null; GODEBUG=gctrace=1 GOGC=off USE_GCI=false MSG_SIZE=20480 WINDOW_SIZE=0 PORT=3000 nohup ./msgpush-go  >msgpush_${expid}_${ip}.out 2>msgpush_${expid}_${ip}.err &"; done'
     
       [execution.gc_off.1]
       exports = 'export expid="gc_off_go_1"'

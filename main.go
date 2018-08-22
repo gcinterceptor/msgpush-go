@@ -31,16 +31,20 @@ func main() {
 	}
 	fmt.Printf("Configuration: %+v\n", c)
 	// Inspiration: https://making.pusher.com/golangs-real-time-gc-in-theory-and-practice/
-	buffer = make([][]byte, c.WindowSize)
+	if c.WindowSize > 0 {
+		buffer = make([][]byte, c.WindowSize)
+	}
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		m := make([]byte, c.MsgSize)
 		for i := range m {
 			m[i] = byte(i)
 		}
-		mu.Lock()
-		buffer[msgCount] = m
-		msgCount = (msgCount + 1) % c.WindowSize
-		mu.Unlock()
+		if c.WindowSize > 0 {
+			mu.Lock()
+			buffer[msgCount] = m
+			msgCount = (msgCount + 1) % c.WindowSize
+			mu.Unlock()
+		}
 	})
 	if c.UseGCI {
 		http.Handle("/", httphandler.GCI(handler))
