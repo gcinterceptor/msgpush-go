@@ -13,7 +13,7 @@ import (
 type config struct {
 	UseGCI     bool `default:"false" envconfig:"USE_GCI"`
 	Port       int  `default:"3000" envconfig:"PORT"`
-	WindowSize int  `default:"1" envconfig:"WINDOW_SIZE"`
+	WindowSize int  `default:"0" envconfig:"WINDOW_SIZE"`
 	MsgSize    int  `default:"1024" envconfig:"MSG_SIZE"`
 }
 
